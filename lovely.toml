@@ -1,0 +1,193 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+# Context srl_pre_after
+[[patches]]
+[patches.pattern]
+target = "functions/state_events.lua"
+pattern = "if hand_chips*mult > 0 then "
+position = "before"
+payload = """
+SMODS.calculate_context({srl_pre_after = true, chips_score = math.floor(hand_chips * mult)})
+"""
+match_indent = true
+
+# Add fusion ability to multibox
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+pattern = "if AUT.info then"
+position = "before"
+payload = """
+if card and card.ability and card.ability.srl_fusion then
+    local fusion_ui = card.ability.srl_fusion:generate_UIBox_ability_table()
+    multi_boxes[#multi_boxes+1] = desc_from_rows(fusion_ui.main)
+end
+"""
+match_indent = true
+
+# Buff update
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+pattern = 'if G.STAGE == G.STAGES.RUN then'
+position = 'after'
+match_indent = true
+payload = '''
+    SRL_FUNC.apply_all_buffs()
+'''
+
+# Prevent "remove_from_deck" effect from fusion
+[[patches]]
+[patches.pattern]
+target = 'card.lua'
+pattern = 'self.added_to_deck = false'
+position = 'after'
+match_indent = true
+payload = '''
+if self.srl_ignore_remove_effects then return end
+'''
+
+# Effect and minion calculation 1
+[[patches]]
+[patches.pattern]
+target = 'functions/common_events.lua'
+pattern = '-- TARGET: evaluate your own repetition effects'
+position = 'before'
+match_indent = true
+payload = '''
+if card.ability.srl_effect then
+    local effect = card:calculate_effect(context)
+    if effect then
+        ret.effect = effect
+    end
+end
+
+if card.ability.srl_minion then
+    local minion = card:calculate_minion(context)
+    if minion then
+        ret.minion = minion
+    end
+end
+'''
+
+# Effect and minion calculation 2
+[[patches]]
+[patches.pattern]
+target = 'functions/common_events.lua'
+pattern = '-- TARGET: evaluate your own general effects'
+position = 'before'
+match_indent = true
+payload = '''
+if card.ability.srl_effect then
+    local effect = card:calculate_effect(context)
+    if effect then
+        ret.effect = effect
+    end
+end
+
+if card.ability.srl_minion then
+    local minion = card:calculate_minion(context)
+    if minion then
+        ret.minion = minion
+    end
+end
+'''
+
+# Effect and minion calculation 3
+[[patches]]
+[patches.pattern]
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = 'for _, k in ipairs(SMODS.Sticker.obj_buffer) do'
+position = 'before'
+match_indent = true
+payload = '''
+for _, key in ipairs({'effect', 'minion'}) do
+    SMODS.calculate_effect_table_key(effect_table, key, card, ret)
+end
+'''
+
+# Class Orb, fusion, effect and minion tooltip and badges on card
+[[patches]]
+[patches.pattern]
+target = "functions/common_events.lua"
+pattern = "if _c.set == 'Other' then"
+position = "before"
+payload = '''
+if card and card.ability then
+    if card.ability.srl_class_orb and card.ability.srl_class_orb == "Ultimate" then
+        info_queue[#info_queue+1] = {key = "srl_ultimate_class", set = "Other"}
+    end
+
+    if card.ability.srl_minion then
+        local min_iq = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_minion.key]) or SRL_FUNC.min_iq(card.ability.srl_minion.name)
+        if min_iq then
+            info_queue[#info_queue+1] = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_minion.key]) or SRL_FUNC.min_iq(card.ability.srl_minion.name)
+            if info_queue[#info_queue].config then
+                info_queue[#info_queue].config.extra.rounds = card.ability.srl_minion_rounds or 1
+            end
+            G.BADGE_COL = G.BADGE_COL or {}
+            G.BADGE_COL[card.ability.srl_minion.key] = G.C.FILTER
+            badges[#badges + 1] = card.ability.srl_minion.key
+        end
+    end
+
+    if card.ability.srl_effect then
+        local eff_iq = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_effect.key]) or SRL_FUNC.eff_iq(card.ability.srl_effect.name)
+        if eff_iq then
+            info_queue[#info_queue+1] = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_effect.key]) or SRL_FUNC.eff_iq(card.ability.srl_effect.name)
+            if info_queue[#info_queue].config then
+                info_queue[#info_queue].config.extra.rounds = card.ability.srl_effect_rounds or 1
+            end
+            G.BADGE_COL = G.BADGE_COL or {}
+            G.BADGE_COL[card.ability.srl_effect.key] = (card.ability.srl_effect.is_buff and G.C.GREEN) or G.C.RED
+            badges[#badges + 1] = card.ability.srl_effect.key
+        end
+    end
+end
+'''
+match_indent = true
+
+# Sprite in description
+[[patches]]
+[patches.pattern]
+target = "functions/misc_functions.lua"
+pattern = "elseif part.control.E then"
+position = "before"
+payload = '''
+elseif part.control.srl_S then
+    local sprite_size = 0.32*(part.control.s and tonumber(part.control.s) or 1)*desc_scale
+    local center = G.P_CENTERS["eff_srl_" .. part.control.srl_S] or G.P_CENTERS["min_srl_" .. part.control.srl_S]
+    if center then
+        final_line[#final_line + 1] = {
+            n = G.UIT.O,
+            config = {
+                object = Sprite(0, 0, sprite_size, sprite_size, G.ASSET_ATLAS[center.atlas .. "_mini"], {x = center.pos.x, y = center.pos.y})
+            }
+        }
+    end
+'''
+match_indent = true
+
+# Sprite in description box
+[[patches]]
+[patches.pattern]
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = "elseif part.control.X or part.control.B then"
+position = "before"
+payload = '''
+elseif part.control.srl_S then
+    local sprite_size = 0.32*(part.control.s and tonumber(part.control.s) or 1) * desc_scale
+    local center = G.P_CENTERS["eff_srl_" .. part.control.srl_S] or G.P_CENTERS["min_srl_" .. part.control.srl_S]
+    if center then
+        final_line[#final_line + 1] = {
+            n = G.UIT.O,
+            config = {
+                object = Sprite(0, 0, sprite_size, sprite_size, G.ASSET_ATLAS[center.atlas .. "_mini"], {x = center.pos.x, y = center.pos.y})
+            }
+        }
+    end
+'''
+match_indent = true

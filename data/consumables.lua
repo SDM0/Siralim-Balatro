@@ -1,0 +1,119 @@
+SMODS.Atlas{
+    key = "srl_class_orbs",
+    path = "srl_class_orbs.png",
+    px = 61,
+    py = 65
+}
+
+SMODS.ConsumableType {
+    key = 'srl_Class_Orb',
+    collection_rows = {3, 3},
+    primary_colour = HEX('286093'),
+    secondary_colour = HEX('527fa8'),
+    default = "c_srl_nature_orb",
+}
+
+local classes = {"Chaos", "Death", "Life", "Nature", "Sorcery", "Ultimate"}
+
+-- X Orb
+
+for i = 1, #classes do
+    SMODS.Consumable{
+        key = classes[i]:lower() .. '_orb',
+        name = classes[i] .. ' Orb',
+        set = 'srl_Class_Orb',
+        pos = {x = i - 1, y = 0},
+        cost = 4,
+        hidden = classes[i] == "Ultimate",
+        loc_vars = function(self, info_queue, card)
+            if classes[i] == "Ultimate" then
+                info_queue[#info_queue+1] = {key = "srl_ultimate_class", set = "Other"}
+            end
+        end,
+        can_use = function(self, card, area, copier)
+            if G.jokers and #G.jokers.highlighted == 1 then
+                local class = SRL_FUNC.get_class(G.jokers.highlighted[1])
+                return class and class ~= "Ultimate" and class ~= classes[i]
+            end
+            return false
+        end,
+        use = function(self, card)
+            local used_tarot = card or self
+            G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.4, func = function()
+                local selected_creature = G.jokers.highlighted[1]
+                selected_creature.ability.srl_class_orb = classes[i]
+                used_tarot:juice_up(0.3, 0.5)
+                return true
+            end}))
+            G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.2,func = function() if G.jokers then G.jokers:unhighlight_all() end; return true end }))
+        end,
+        display_size = {w = 76, h = 81},
+        atlas = "srl_class_orbs"
+    }
+
+    SRL_MOD.modded_consumables["c_srl_" .. classes[i]:lower() .. "_orb"] = classes[i] .. " Orb"
+end
+
+-- Fusion
+
+SMODS.Consumable{
+    key = 'fusion',
+    name = 'Fusion',
+    set = 'Spectral',
+    pos = {x = 0, y = 0},
+    cost = 4,
+    can_use = function(self, card, area, copier)
+        if G.jokers and G.jokers.cards and (G.jokers.highlighted and #G.jokers.highlighted == 1) then
+            local selected_creature = G.jokers.highlighted[1]
+            if not SRL_FUNC.is_fused(selected_creature) then
+                for _, v in ipairs(G.jokers.cards) do
+                    if v ~= selected_creature and v.T.x > selected_creature.T.x and SRL_FUNC.is_creature(v) and selected_creature.config.center.key ~= v.config.center.key and not SRL_FUNC.is_fused(v) then
+                        return true
+                    end
+                end
+            end
+        end
+        return false
+    end,
+    use = function(self, card)
+        local used_tarot = card or self
+        local selected_creature = G.jokers.highlighted[1]
+        local creature_to_fuse = nil
+
+        for _, v in ipairs(G.jokers.cards) do
+            if v ~= selected_creature and v.T.x > selected_creature.T.x and SRL_FUNC.is_creature(v) and not SRL_FUNC.is_fused(v) then
+                creature_to_fuse = v
+                break
+            end
+        end
+
+        G.E_MANAGER:add_event(Event({func = function()
+            selected_creature.ability.extra.srl_class = SRL_FUNC.get_class(creature_to_fuse, true)
+
+            if creature_to_fuse.ability.srl_class_orb then
+                if not selected_creature.ability.srl_class_orb or (selected_creature.ability.srl_class_orb and selected_creature.ability.srl_class_orb ~= "Ultimate") then
+                    selected_creature.ability.srl_class_orb = creature_to_fuse.ability.srl_class_orb
+                    creature_to_fuse.ability.srl_class_orb = nil
+                end
+            end
+
+            selected_creature.ability.srl_fusion = SMODS.shallow_copy(creature_to_fuse)
+            used_tarot:juice_up(0.3, 0.5)
+
+            return true
+        end}))
+
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.4,
+            func = function()
+                creature_to_fuse.srl_ignore_remove_effects = true
+                creature_to_fuse:start_dissolve()
+            return true
+        end}))
+
+        G.E_MANAGER:add_event(Event({trigger = 'after',delay = 0.2, func = function() if G.jokers then G.jokers:unhighlight_all() end; return true end }))
+    end,
+}
+
+SRL_MOD.modded_consumables["c_srl_fusion"] = "Fusion"
