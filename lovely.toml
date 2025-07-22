@@ -58,15 +58,22 @@ pattern = '-- TARGET: evaluate your own repetition effects'
 position = 'before'
 match_indent = true
 payload = '''
-if card.ability.srl_effect then
-    local effect = card:calculate_effect(context)
-    if effect then
-        ret.effect = effect
+if card.ability.srl_effect_buff then
+    local effect_buff = card:calculate_srl_buff(context)
+    if effect_buff then
+        ret.effect_buff = effect
+    end
+end
+
+if card.ability.srl_effect_debuff then
+    local effect_debuff = card:calculate_srl_debuff(context)
+    if effect_debuff then
+        ret.effect_debuff = effect
     end
 end
 
 if card.ability.srl_minion then
-    local minion = card:calculate_minion(context)
+    local minion = card:calculate_srl_minion(context)
     if minion then
         ret.minion = minion
     end
@@ -81,15 +88,22 @@ pattern = '-- TARGET: evaluate your own general effects'
 position = 'before'
 match_indent = true
 payload = '''
-if card.ability.srl_effect then
-    local effect = card:calculate_effect(context)
-    if effect then
-        ret.effect = effect
+if card.ability.srl_effect_buff then
+    local effect_buff = card:calculate_srl_buff(context)
+    if effect_buff then
+        ret.effect_buff = effect
+    end
+end
+
+if card.ability.srl_effect_debuff then
+    local effect_debuff = card:calculate_srl_debuff(context)
+    if effect_debuff then
+        ret.effect_debuff = effect
     end
 end
 
 if card.ability.srl_minion then
-    local minion = card:calculate_minion(context)
+    local minion = card:calculate_srl_minion(context)
     if minion then
         ret.minion = minion
     end
@@ -104,7 +118,7 @@ pattern = 'for _, k in ipairs(SMODS.Sticker.obj_buffer) do'
 position = 'before'
 match_indent = true
 payload = '''
-for _, key in ipairs({'effect', 'minion'}) do
+for _, key in ipairs({'effect_buff', 'effect_debuff', 'minion'}) do
     SMODS.calculate_effect_table_key(effect_table, key, card, ret)
 end
 '''
@@ -134,16 +148,29 @@ if card and card.ability then
         end
     end
 
-    if card.ability.srl_effect then
-        local eff_iq = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_effect.key]) or SRL_FUNC.eff_iq(card.ability.srl_effect.name)
+    if card.ability.srl_effect_buff then
+        local eff_iq = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_effect_buff.key]) or SRL_FUNC.eff_iq(card.ability.srl_effect_buff.name)
         if eff_iq then
-            info_queue[#info_queue+1] = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_effect.key]) or SRL_FUNC.eff_iq(card.ability.srl_effect.name)
+            info_queue[#info_queue+1] = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_effect_buff.key]) or SRL_FUNC.eff_iq(card.ability.srl_effect_buff.name)
             if info_queue[#info_queue].config then
-                info_queue[#info_queue].config.extra.rounds = card.ability.srl_effect_rounds or 1
+                info_queue[#info_queue].config.extra.rounds = card.ability.srl_effect_buff_rounds or 1
             end
             G.BADGE_COL = G.BADGE_COL or {}
-            G.BADGE_COL[card.ability.srl_effect.key] = (card.ability.srl_effect.is_buff and G.C.GREEN) or G.C.RED
-            badges[#badges + 1] = card.ability.srl_effect.key
+            G.BADGE_COL[card.ability.srl_effect_buff.key] = G.C.GREEN
+            badges[#badges + 1] = card.ability.srl_effect_buff.key
+        end
+    end
+
+    if card.ability.srl_effect_debuff then
+        local eff_iq = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_effect_debuff.key]) or SRL_FUNC.eff_iq(card.ability.srl_effect_debuff.name)
+        if eff_iq then
+            info_queue[#info_queue+1] = (card.ability.set and card.ability.set ~= "Default" and G.P_CENTERS[card.ability.srl_effect_debuff.key]) or SRL_FUNC.eff_iq(card.ability.srl_effect_debuff.name)
+            if info_queue[#info_queue].config then
+                info_queue[#info_queue].config.extra.rounds = card.ability.srl_effect_debuff_rounds or 1
+            end
+            G.BADGE_COL = G.BADGE_COL or {}
+            G.BADGE_COL[card.ability.srl_effect_debuff.key] = G.C.RED
+            badges[#badges + 1] = card.ability.srl_effect_debuff.key
         end
     end
 end
@@ -179,13 +206,13 @@ pattern = "elseif part.control.X or part.control.B then"
 position = "before"
 payload = '''
 elseif part.control.srl_S then
-    local sprite_size = 0.32*(part.control.s and tonumber(part.control.s) or 1) * desc_scale
+    local sprite_mod = 0.32*(part.control.s and tonumber(part.control.s) or 1) * desc_scale
     local center = G.P_CENTERS["eff_srl_" .. part.control.srl_S] or G.P_CENTERS["min_srl_" .. part.control.srl_S]
     if center then
         final_line[#final_line + 1] = {
             n = G.UIT.O,
             config = {
-                object = Sprite(0, 0, sprite_size, sprite_size, G.ASSET_ATLAS[center.atlas .. "_mini"], {x = center.pos.x, y = center.pos.y})
+                object = Sprite(0, 0, sprite_mod, sprite_mod, G.ASSET_ATLAS[center.atlas .. "_mini"], center.pos)
             }
         }
     end

@@ -56,7 +56,7 @@ SMODS.Joker{
 		SRL_FUNC.mod_val(card, "buff_all")}}
 	end,
 	srl_buff_target_filter = function(target)
-        return SRL_FUNC.get_effect_name(target) == "Mending"
+        return SRL_FUNC.get_buff_name(target) == "Mending"
     end,
 	in_pool = function()
 		if SRL_MOD.srl_pool_req then
@@ -81,17 +81,16 @@ SMODS.Joker{
 	pos = {x = 2, y = 0},
 	cost = 4,
 	blueprint_compat = true,
-	config = {extra = {srl_class = "Nature", srl_race = "Ent", blind = 0.1}},
+	config = {extra = {srl_class = "Nature", srl_race = "Ent"}},
 	loc_vars = function(self, info_queue, card)
 		info_queue[#info_queue+1] = SRL_FUNC.eff_iq("Mending", card)
-		return {vars = {self.name, SRL_FUNC.get_class(card), card.ability.extra.srl_race, colours = {SRL_FUNC.get_class_color(SRL_FUNC.get_class(card))},
-		SRL_FUNC.mod_val(card, "blind")}}
+		return {vars = {self.name, SRL_FUNC.get_class(card), card.ability.extra.srl_race, colours = {SRL_FUNC.get_class_color(SRL_FUNC.get_class(card))}}}
 	end,
 	calculate = function(self, card, context)
 		if context.cardarea == G.jokers and context.after then
 			for _, v in ipairs(G.jokers.cards) do
-				if not v.debuff and SRL_FUNC.get_effect_name(v) == "Mending" then
-					v:calculate_effect(context, true)
+				if not v.debuff and SRL_FUNC.get_buff_name(v) == "Mending" then
+					v:calculate_srl_buff(context, true)
 				end
 			end
 		end
@@ -118,14 +117,17 @@ SMODS.Joker{
 	rarity = 1,
 	pos = {x = 3, y = 0},
 	cost = 4,
-	config = {extra = {srl_class = "Nature", srl_race = "Ent", blind = 2.5}},
+	config = {extra = {srl_class = "Nature", srl_race = "Ent", blind = 5}},
 	loc_vars = function(self, info_queue, card)
 		return {vars = {self.name, SRL_FUNC.get_class(card), card.ability.extra.srl_race, colours = {SRL_FUNC.get_class_color(SRL_FUNC.get_class(card))},
-		SRL_FUNC.mod_val(card, "blind"), SRL_FUNC.mod_val(card, "blind", SRL_FUNC.count_effect("Mending"))}}
+		SRL_FUNC.mod_val(card, "blind"), SRL_FUNC.mod_val(card, "blind", SRL_FUNC.count_buff("Mending"))}}
 	end,
 	calculate = function(self, card, context)
 		if context.setting_blind and SRL_FUNC.no_bp_retrigger(context) then
-			SRL_FUNC.lower_blind_req(card, SRL_FUNC.mod_val(card, "blind", SRL_FUNC.count_effect("Mending")))
+			local amount = SRL_FUNC.mod_val(card, "blind", SRL_FUNC.count_buff("Mending"))
+			if amount ~= 0 then
+				SRL_FUNC.lower_blind_req(card, amount)
+			end
 		end
 	end,
 	in_pool = function()
@@ -647,17 +649,15 @@ SMODS.Joker{
 	rarity = 1,
 	pos = {x = 17, y = 0},
 	cost = 4,
-	config = {extra = {srl_class = "Chaos", srl_race = "Harpy", effect = 5}},
+	config = {extra = {srl_class = "Chaos", srl_race = "Harpy", effect = 5, effect_name = "Blind"}},
 	loc_vars = function(self, info_queue, card)
-		info_queue[#info_queue+1] = SRL_FUNC.eff_iq("Mending")
-		info_queue[#info_queue+1] = SRL_FUNC.min_iq("Animated Gem")
+		info_queue[#info_queue+1] = SRL_FUNC.eff_iq("Blind")
 		return {vars = {self.name, SRL_FUNC.get_class(card), card.ability.extra.srl_race, colours = {SRL_FUNC.get_class_color(SRL_FUNC.get_class(card))},
 		SRL_FUNC.mod_val(card, "effect")}}
 	end,
 	calculate = function(self, card, context)
 		if context.setting_blind then
-			SRL_FUNC.set_effect(G.jokers.cards[1], "Mending", SRL_FUNC.mod_val(card, "effect"))
-			SRL_FUNC.set_minion(G.jokers.cards[1], "Animated Gem", SRL_FUNC.mod_val(card, "effect"))
+			SRL_FUNC.set_effect(G.jokers.cards[1], "blind", SRL_FUNC.mod_val(card, "effect"))
 		end
 	end,
 	in_pool = function()

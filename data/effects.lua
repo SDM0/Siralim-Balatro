@@ -52,14 +52,28 @@ SRL_MOD.Effect = SMODS.Center:extend {
 }
 
 SMODS.DrawStep {
-    key = 'effect',
+    key = 'buff',
     order = 31,
     func = function(self, layer)
-        local effect = (self and self.ability and self.ability.srl_effect) or nil
+        local effect = (self and self.ability and self.ability.srl_effect_buff) or nil
         if effect then
-            if not SRL_MOD.mending then SRL_MOD.mending = Sprite(0, 0, G.CARD_W, G.CARD_H, G.ASSET_ATLAS["srl_effects"], {x = 0,y = 0}) end
-            SRL_MOD.mending.role.draw_major = self
-            SRL_MOD.mending:draw_shader('dissolve', nil, nil, nil, self.children.center)
+            if not SRL_MOD[effect.key] then SRL_MOD[effect.key] = Sprite(0, 0, G.CARD_W, G.CARD_H, G.ASSET_ATLAS["srl_effects"], {x = effect.pos.x, y = effect.pos.y}) end
+            SRL_MOD[effect.key].role.draw_major = self
+            SRL_MOD[effect.key]:draw_shader('dissolve', nil, nil, nil, self.children.center)
+        end
+    end,
+    conditions = { vortex = false, facing = 'front' },
+}
+
+SMODS.DrawStep {
+    key = 'debuff',
+    order = 31,
+    func = function(self, layer)
+        local effect = (self and self.ability and self.ability.srl_effect_debuff) or nil
+        if effect then
+            if not SRL_MOD[effect.key] then SRL_MOD[effect.key] = Sprite(0, 0, G.CARD_W, G.CARD_H, G.ASSET_ATLAS["srl_effects"], {x = effect.pos.x, y = effect.pos.y}) end
+            SRL_MOD[effect.key].role.draw_major = self
+            SRL_MOD[effect.key]:draw_shader('dissolve', nil, nil, nil, self.children.center)
         end
     end,
     conditions = { vortex = false, facing = 'front' },
@@ -70,7 +84,6 @@ SRL_MOD.Effect{
     name = "Mending",
     pos = {x = 0, y = 0},
     config = {extra = {blind = 10, rounds = 1}},
-    is_buff = true,
     loc_vars = function(self, info_queue, card)
         local cfg = (card and card.ability) or self.config
         return {vars = {cfg.extra.blind, cfg.extra.rounds}}
@@ -79,6 +92,22 @@ SRL_MOD.Effect{
         if (context.setting_blind or context.srl_trigger_effect) and SRL_FUNC.no_bp_retrigger(context) then
             SRL_FUNC.lower_blind_req(card, self.config.extra.blind)
         end
+    end,
+}
+
+SRL_MOD.Effect{
+    key = "blind",
+    name = "Blind",
+    pos = {x = 1, y = 0},
+    config = {extra = {odds = 4, rounds = 1}},
+    is_buff = false,
+    loc_vars = function(self, info_queue, card)
+        local cfg = (card and card.ability) or self.config
+        local num, den = SMODS.get_probability_vars((card or self), 1, cfg.extra.odds)
+        return {vars = {num, den, cfg.extra.rounds}}
+    end,
+    calculate = function(self, card, context)
+
     end,
 }
 

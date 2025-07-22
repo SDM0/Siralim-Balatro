@@ -296,6 +296,8 @@ end
 
 -- Update buffed values
 function SRL_FUNC.apply_all_buffs()
+    if not G.jokers and G.jokers.cards then return end
+
     local all_creatures = SRL_FUNC.get_fusions()
     local targets = {}
 
@@ -402,21 +404,39 @@ function SRL_FUNC.ed_iq(card, info_queue, edition)
     end
 end
 
--- Get buff/debuff on card
-function SRL_FUNC.get_effect(card)
+-- Get buff on card
+function SRL_FUNC.get_buff(card)
     if not card then return end
 
-    if card.ability and card.ability.srl_effect then
-        return card.ability.srl_effect.key
+    if card.ability and card.ability.srl_effect_buff then
+        return card.ability.srl_effect_buff
     end
 end
 
--- Get buff/debuff name on card
-function SRL_FUNC.get_effect_name(card)
+-- Get debuff on card
+function SRL_FUNC.get_debuff(card)
     if not card then return end
 
-    if card.ability and card.ability.srl_effect then
-        return card.ability.srl_effect.name
+    if card.ability and card.ability.srl_effect_debuff then
+        return card.ability.srl_effect_debuff
+    end
+end
+
+-- Get buff name on card
+function SRL_FUNC.get_buff_name(card)
+    if not card then return end
+
+    if card.ability and card.ability.srl_effect_buff then
+        return card.ability.srl_effect_buff.name
+    end
+end
+
+-- Get debuff name on card
+function SRL_FUNC.get_debuff_name(card)
+    if not card then return end
+
+    if card.ability and card.ability.srl_effect_debuff then
+        return card.ability.srl_effect_debuff.name
     end
 end
 
@@ -438,8 +458,13 @@ function SRL_FUNC.set_effect(card, effect, rounds)
             delay = not immediate and 0.2 or 0,
             blockable = not immediate,
             func = function()
-                card.ability.srl_effect = _effect
-                card.ability.srl_effect_rounds = _rounds
+                if _effect.is_buff then
+                    card.ability.srl_effect_buff = _effect
+                    card.ability.srl_effect_buff_rounds = _rounds
+                else
+                    card.ability.srl_effect_debuff = _effect
+                    card.ability.srl_effect_debuff_rounds = _rounds
+                end
                 card:juice_up(1, 0.5)
                 play_sound((_effect.is_buff and 'srl_bonus') or 'srl_malus')
                 SMODS.enh_cache:write(card, nil)
@@ -449,11 +474,19 @@ function SRL_FUNC.set_effect(card, effect, rounds)
     end
 end
 
--- Remove buff/debuff on card
-function SRL_FUNC.remove_effect(card)
-    if SRL_FUNC.get_effect(card) then
-        card.ability.srl_effect = nil
-        card.ability.srl_effect_rounds = nil
+-- Remove buff on card
+function SRL_FUNC.remove_buff(card)
+    if SRL_FUNC.get_buff(card) then
+        card.ability.srl_effect_buff = nil
+        card.ability.srl_effect_buff_rounds = nil
+    end
+end
+
+-- Remove debuff on card
+function SRL_FUNC.remove_debuff(card)
+    if SRL_FUNC.get_debuff(card) then
+        card.ability.srl_effect_debuff = nil
+        card.ability.srl_effect_debuff_rounds = nil
     end
 end
 
@@ -465,7 +498,9 @@ function SRL_FUNC.eff_iq(effect, card)
     local _effect = (type(effect) == 'string' and G.P_CENTERS[effect_key]) or effect
 
     if not _effect then return {} end
-    if card and SRL_FUNC.get_effect(card) == effect_key then return end
+    local buff = SRL_FUNC.get_buff(card)
+    local debuff = SRL_FUNC.get_debuff(card)
+    if card and ((buff and buff.key) or (debuff and debuff.key)) == effect_key then return end
 
     local _vars = {}
     if _effect.loc_vars and type(_effect.loc_vars) == "function" then
@@ -480,18 +515,32 @@ function SRL_FUNC.eff_iq(effect, card)
     }
 end
 
--- Count each Joker with any or a specific effect
-function SRL_FUNC.count_effect(effect)
+-- Count each Joker with any or a specific buff
+function SRL_FUNC.count_buff(effect)
     if not (G.jokers and G.jokers.cards) then return 0 end
 
     local total = 0
 
     for _, v in ipairs(G.jokers.cards) do
-        if SRL_FUNC.is_creature(v) then
-            local effect_name = SRL_FUNC.get_effect_name(v)
-            if effect_name ~= nil and (not effect or (effect and effect_name == effect)) then
-                total = total + 1
-            end
+        local effect_name = SRL_FUNC.get_buff_name(v)
+        if effect_name ~= nil and (not effect or (effect and effect_name == effect)) then
+            total = total + 1
+        end
+    end
+
+    return total
+end
+
+-- Count each Joker with any or a specific debuff
+function SRL_FUNC.count_debuff(effect)
+    if not (G.jokers and G.jokers.cards) then return 0 end
+
+    local total = 0
+
+    for _, v in ipairs(G.jokers.cards) do
+        local effect_name = SRL_FUNC.get_debuff_name(v)
+        if effect_name ~= nil and (not effect or (effect and effect_name == effect)) then
+            total = total + 1
         end
     end
 
@@ -579,11 +628,9 @@ function SRL_FUNC.count_minion(minion)
     local total = 0
 
     for _, v in ipairs(G.jokers.cards) do
-        if SRL_FUNC.is_creature(v) then
-            local minion_name = SRL_FUNC.get_minion_name(v)
-            if minion_name ~= nil and (not minion or (minion and minion_name == minion)) then
-                total = total + 1
-            end
+        local minion_name = SRL_FUNC.get_minion_name(v)
+        if minion_name ~= nil and (not minion or (minion and minion_name == minion)) then
+            total = total + 1
         end
     end
 
@@ -633,10 +680,25 @@ function SRL_FUNC.lower_blind_req(card, amount)
     end
 end
 
--- Calculation for buffs/status
-function Card:calculate_effect(context, trigger_effect)
-    if self.ability.srl_effect then
-        local effect = self.ability.srl_effect
+-- Calculation for buffs
+function Card:calculate_srl_buff(context, trigger_effect)
+    if self.ability.srl_effect_buff then
+        local effect = self.ability.srl_effect_buff
+        if effect.calculate and type(effect.calculate) == 'function' then
+            if trigger_effect then context.srl_trigger_effect = true end
+            local o = effect:calculate(self, context)
+            if o then
+                if not o.card then o.card = self end
+                return o
+            end
+        end
+    end
+end
+
+-- Calculation for debuffs
+function Card:calculate_srl_debuff(context, trigger_effect)
+    if self.ability.srl_effect_debuff then
+        local effect = self.ability.srl_effect_debuff
         if effect.calculate and type(effect.calculate) == 'function' then
             if trigger_effect then context.srl_trigger_effect = true end
             local o = effect:calculate(self, context)
@@ -649,7 +711,7 @@ function Card:calculate_effect(context, trigger_effect)
 end
 
 -- Calculation for minions
-function Card:calculate_minion(context, trigger_minion)
+function Card:calculate_srl_minion(context, trigger_minion)
     if self.ability.srl_minion then
         local minion = self.ability.srl_minion
         if minion.calculate and type(minion.calculate) == 'function' then
@@ -663,18 +725,28 @@ function Card:calculate_minion(context, trigger_minion)
     end
 end
 
--- Calculation for buffs/status at end of round
-function Card:calculate_eor_effect(context)
-    if self.ability.srl_effect then
-        self.ability.srl_effect_rounds = self.ability.srl_effect_rounds - 1
-        if self.ability.srl_effect_rounds <= 0 then
-            SRL_FUNC.remove_effect(self)
+-- Calculation for buffs at end of round
+function Card:calculate_eor_srl_buff(context)
+    if self.ability.srl_effect_buff then
+        self.ability.srl_effect_buff_rounds = self.ability.srl_effect_buff_rounds - 1
+        if self.ability.srl_effect_buff_rounds <= 0 then
+            SRL_FUNC.remove_buff(self)
+        end
+    end
+end
+
+-- Calculation for debuffs at end of round
+function Card:calculate_eor_srl_debuff(context)
+    if self.ability.srl_effect_debuff then
+        self.ability.srl_effect_debuff_rounds = self.ability.srl_effect_debuff_rounds - 1
+        if self.ability.srl_effect_debuff_rounds <= 0 then
+            SRL_FUNC.remove_debuff(self)
         end
     end
 end
 
 -- Calculation for minions at end of round
-function Card:calculate_eor_minion(context)
+function Card:calculate_eor_srl_minion(context)
     if self.ability.srl_minion then
         self.ability.srl_minion_rounds = self.ability.srl_minion_rounds - 1
         if self.ability.srl_minion_rounds <= 0 then
@@ -697,8 +769,20 @@ function Card:calculate_joker(context)
     end
 
     if context.end_of_round and context.main_eval and SRL_FUNC.no_bp_retrigger(context) then
-        self:calculate_eor_effect()
-        self:calculate_eor_minion()
+        self:calculate_eor_srl_buff()
+        self:calculate_eor_srl_debuff()
+        self:calculate_eor_srl_minion()
+    end
+
+    if not (context.card and context.card == self) and calc ~= nil and SRL_FUNC.get_debuff_name(self) == "Blind" then
+        local malus = SRL_FUNC.get_debuff(self)
+        if SMODS.pseudorandom_probability(self, "blind", 1, malus.config.extra.odds) then
+            card_eval_status_text(self, 'extra', nil, nil, nil, {
+                message = localize('k_nope_ex'),
+                colour = G.C.SECONDARY_SET.Tarot
+            })
+            return nil, false
+        end
     end
 
     return calc
@@ -708,6 +792,15 @@ end
 local cdb = Card.calculate_dollar_bonus
 function Card:calculate_dollar_bonus()
     local calc = cdb(self)
+
+    local malus = SRL_FUNC.get_debuff_name(self)
+    if calc and calc ~= 0 and malus and malus == "Blind" and SMODS.pseudorandom_probability(self, "blind", 1, 1) then
+        card_eval_status_text(self, 'extra', nil, nil, nil, {
+            message = localize('k_nope_ex'),
+            colour = G.C.SECONDARY_SET.Tarot
+        })
+        return
+    end
 
     if self and self.ability and self.ability.srl_fusion then
         local ret = Card.calculate_dollar_bonus(self.ability.srl_fusion)
