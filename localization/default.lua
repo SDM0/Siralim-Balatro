@@ -150,7 +150,15 @@ local localization = {
 					"{C:attention}-#1#%{} blind requirement",
 					"{C:inactive}(lasts {C:attention}#2#{C:inactive} round(s))"
 				}
-			}
+			},
+			eff_srl_blind = {
+				name = "Blind",
+				text = {
+					"{C:green}#1# in #2#{} chance",
+					"to not trigger",
+					"{C:inactive}(lasts {C:attention}#2#{C:inactive} round(s))"
+				}
+			},
 		},
 		Minion = {
 			min_srl_animated_gem = {
@@ -188,6 +196,13 @@ local localization = {
 				text = {
 					"When {C:attention}Blind{} is selected,",
 					"{C:attention}-#1#%{} blind requirement"
+				}
+			},
+			eff_srl_blind_no_rounds = {
+				name = "Blind",
+				text = {
+					"{C:green}#1# in #2#{} chance",
+					"to not {C:attention}trigger{} each effect"
 				}
 			},
 			min_srl_animated_gem_no_rounds = {
@@ -344,9 +359,8 @@ local localization = {
 			j_srl_harpy_eyegouger = {
 				name = {"#1#", "{s:0.8,V:1}#2#{s:0.8} / #3#{}"},
 				text = {{
-					"Give " .. eom("Mending") .. " and",
-					"" .. eom("Animated Gem") .. " to",
-					"the first Joker",
+					"Give " .. eom("Blind"),
+					"to the first Joker",
 					"for {C:attention}#4#{} round"
 				}}
 			},
