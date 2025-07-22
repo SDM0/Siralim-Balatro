@@ -44,7 +44,7 @@ SMODS.DrawStep {
     func = function(self, layer)
         local minion = (self and self.ability and self.ability.srl_minion) or nil
         if minion then
-            if not SRL_MOD[minion.key] then SRL_MOD[minion.key] = Sprite(0, 0, G.CARD_W, G.CARD_H, G.ASSET_ATLAS["srl_minions"], {x = 0,y = 0}) end
+            if not SRL_MOD[minion.key] then SRL_MOD[minion.key] = Sprite(0, 0, G.CARD_W, G.CARD_H, G.ASSET_ATLAS["srl_minions"], minion.pos) end
             SRL_MOD[minion.key].role.draw_major = self
             SRL_MOD[minion.key]:draw_shader('dissolve', nil, nil, nil, self.children.center)
         end
