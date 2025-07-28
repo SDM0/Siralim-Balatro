@@ -51,7 +51,7 @@ end
 -- Check if the Joker card is a Creature
 function SRL_FUNC.is_creature(card)
     if not card then return false end
-    local extra = card.ability.extra
+    local extra = card.ability and card.ability.extra
     if extra ~= nil and type(extra) == "table" then
         local class = card.ability.extra.srl_class
         return class ~= nil
@@ -90,7 +90,7 @@ function SRL_FUNC.get_class(card, ignore_effect)
             return card.ability.srl_class_orb
         end
 
-        if card.ability.srl_fusion then
+        if card.ability.srl_fusion and card.ability.srl_fusion.ability then
             return card.ability.srl_fusion.ability.extra.srl_class
         end
     end
@@ -246,7 +246,7 @@ function SRL_FUNC.buff_change(card, buff, value, sign)
     local op = sign or '+'
 
     if op == '+' then
-        table.insert(buffs, value)
+        buffs[#buffs+1] = value
     elseif op == '-' then
         for i, v in ipairs(buffs) do
             if v == value then
@@ -296,7 +296,7 @@ end
 
 -- Update buffed values
 function SRL_FUNC.apply_all_buffs()
-    if not G.jokers and G.jokers.cards then return end
+    if not (G.jokers and G.jokers.cards) then return end
 
     local all_creatures = SRL_FUNC.get_fusions()
     local targets = {}
@@ -304,7 +304,7 @@ function SRL_FUNC.apply_all_buffs()
     -- Include all cards that qualify as creatures
     for _, card in ipairs(all_creatures) do
         if SRL_FUNC.is_creature(card) then
-            table.insert(targets, card)
+            targets[#targets+1] = card
         end
     end
 
@@ -333,24 +333,26 @@ function SRL_FUNC.apply_all_buffs()
         local center = source.config and source.config.center or nil
         local buff_target_filter = center and center.srl_buff_target_filter
 
-        for key, value in pairs(extra) do
-            if key:match("^buff_") then
-                local buff_type = key:gsub("^buff_", "")
-                local stats = (buff_type == "all") and SRL_MOD.buffable_stats or {buff_type}
+        if extra and type(extra) == "table" then
+            for key, value in pairs(extra) do
+                if key:match("^buff_") then
+                    local buff_type = key:gsub("^buff_", "")
+                    local stats = (buff_type == "all") and SRL_MOD.buffable_stats or {buff_type}
 
-                for _, target in ipairs(targets) do
-                    local passes_filter = not buff_target_filter or buff_target_filter(target)
-                    if passes_filter then
-                        -- Apply to the main target
-                        for _, stat in ipairs(stats) do
-                            SRL_FUNC.buff_change(target, stat, value, '+')
-                        end
-
-                        -- Also apply to its fusion (unconditionally)
-                        local fusion = target.ability and target.ability.srl_fusion
-                        if fusion then
+                    for _, target in ipairs(targets) do
+                        local passes_filter = not buff_target_filter or buff_target_filter(target)
+                        if passes_filter then
+                            -- Apply to the main target
                             for _, stat in ipairs(stats) do
-                                SRL_FUNC.buff_change(fusion, stat, value, '+')
+                                SRL_FUNC.buff_change(target, stat, value, '+')
+                            end
+
+                            -- Also apply to its fusion (unconditionally)
+                            local fusion = target.ability and target.ability.srl_fusion
+                            if fusion then
+                                for _, stat in ipairs(stats) do
+                                    SRL_FUNC.buff_change(fusion, stat, value, '+')
+                                end
                             end
                         end
                     end
@@ -441,7 +443,7 @@ function SRL_FUNC.get_debuff_name(card)
 end
 
 -- Set buff/debuff on card
-function SRL_FUNC.set_effect(card, effect, rounds)
+function SRL_FUNC.set_effect(card, effect, rounds, immediate)
     if not (card and effect) then return end
 
     local _effect = effect
@@ -458,15 +460,18 @@ function SRL_FUNC.set_effect(card, effect, rounds)
             delay = not immediate and 0.2 or 0,
             blockable = not immediate,
             func = function()
-                if _effect.is_buff then
-                    card.ability.srl_effect_buff = _effect
-                    card.ability.srl_effect_buff_rounds = _rounds
-                else
-                    card.ability.srl_effect_debuff = _effect
-                    card.ability.srl_effect_debuff_rounds = _rounds
+                local effect_type = _effect.is_buff and "buff" or "debuff"
+                card.ability["srl_effect_" .. effect_type] = {
+                    key = _effect.key,
+                    name = _effect.name,
+                    config = _effect.config,
+                    pos = _effect.pos,
+                }
+                card.ability["srl_effect_" .. effect_type .. "_rounds"] = _rounds
+                if not immediate then
+                    card:juice_up(1, 0.5)
+                    play_sound((_effect.is_buff and 'srl_bonus') or 'srl_malus')
                 end
-                card:juice_up(1, 0.5)
-                play_sound((_effect.is_buff and 'srl_bonus') or 'srl_malus')
                 SMODS.enh_cache:write(card, nil)
                 return true
             end
@@ -552,7 +557,7 @@ function SRL_FUNC.get_minion(card)
     if not card then return end
 
     if card.ability and card.ability.srl_minion then
-        return card.ability.srl_minion.key
+        return card.ability.srl_minion
     end
 end
 
@@ -566,7 +571,7 @@ function SRL_FUNC.get_minion_name(card)
 end
 
 -- Set minion on card
-function SRL_FUNC.set_minion(card, minion, rounds)
+function SRL_FUNC.set_minion(card, minion, rounds, immediate)
     if not (card and minion) then return end
 
     local _minion = nil
@@ -579,14 +584,26 @@ function SRL_FUNC.set_minion(card, minion, rounds)
 
     if _minion then
         local _rounds = rounds or 1
-        card.ability.srl_minion = _minion
-        card.ability.srl_minion_rounds = _rounds
-        play_sound('srl_bonus')
-        card_eval_status_text(card, 'extra', nil, nil, nil, {
-            message = localize('k_srl_minion'),
-            colour = G.C.FILTER
-        })
-        SMODS.enh_cache:write(card, nil)
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = not immediate and 0.2 or 0,
+            blockable = not immediate,
+            func = function()
+                card.ability.srl_minion = {
+                    key = _minion.key,
+                    name = _minion.name,
+                    config = _minion.config,
+                    pos = _minion.pos,
+                }
+                card.ability.srl_minion_rounds = _rounds
+                if not immediate then
+                    card:juice_up(1, 0.5)
+                    play_sound('srl_bonus')
+                end
+                SMODS.enh_cache:write(card, nil)
+                return true
+            end
+        }))
     end
 end
 
@@ -605,8 +622,9 @@ function SRL_FUNC.min_iq(minion, card)
     local minion_key = (type(minion) == 'table' and minion.key) or ("min_srl_" .. string.lower(minion):gsub("%s+", "_"))
     local _minion = (type(minion) == 'string' and G.P_CENTERS[minion_key]) or minion
 
-    if not _minion then return end
-    if card and SRL_FUNC.get_minion(card) == minion_key then return end
+    if not _minion then return {} end
+    local ally = SRL_FUNC.get_minion(card)
+    if card and (ally and ally.key) == minion_key then return end
 
     local _vars = {}
     if _minion.loc_vars and type(_minion.loc_vars) == "function" then
@@ -683,7 +701,7 @@ end
 -- Calculation for buffs
 function Card:calculate_srl_buff(context, trigger_effect)
     if self.ability.srl_effect_buff then
-        local effect = self.ability.srl_effect_buff
+        local effect = G.P_CENTERS[self.ability.srl_effect_buff.key]
         if effect.calculate and type(effect.calculate) == 'function' then
             if trigger_effect then context.srl_trigger_effect = true end
             local o = effect:calculate(self, context)
@@ -698,7 +716,7 @@ end
 -- Calculation for debuffs
 function Card:calculate_srl_debuff(context, trigger_effect)
     if self.ability.srl_effect_debuff then
-        local effect = self.ability.srl_effect_debuff
+        local effect = G.P_CENTERS[self.ability.srl_effect_debuff.key]
         if effect.calculate and type(effect.calculate) == 'function' then
             if trigger_effect then context.srl_trigger_effect = true end
             local o = effect:calculate(self, context)
@@ -713,7 +731,7 @@ end
 -- Calculation for minions
 function Card:calculate_srl_minion(context, trigger_minion)
     if self.ability.srl_minion then
-        local minion = self.ability.srl_minion
+        local minion = G.P_CENTERS[self.ability.srl_minion.key]
         if minion.calculate and type(minion.calculate) == 'function' then
             if trigger_minion then context.trigger_minion = true end
             local o = minion:calculate(self, context)

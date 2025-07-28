@@ -1,10 +1,3 @@
-SMODS.Atlas{
-    key = "srl_jokers",
-    path = "srl_jokers.png",
-    px = 71,
-    py = 95
-}
-
 --- Ebony Ent ---
 
 SMODS.Joker{
@@ -59,7 +52,7 @@ SMODS.Joker{
         return SRL_FUNC.get_buff_name(target) == "Mending"
     end,
 	in_pool = function()
-		if SRL_MOD.srl_pool_req then
+		if SRL_CON.srl_pool_req then
 			local effect = SRL_FUNC.get_extra_val("effect_name")
 			return effect and effect == "Mending"
 		end
@@ -96,7 +89,7 @@ SMODS.Joker{
 		end
 	end,
 	in_pool = function()
-		if SRL_MOD.srl_pool_req then
+		if SRL_CON.srl_pool_req then
 			local effect = SRL_FUNC.get_extra_val("effect_name")
 			return effect and effect == "Mending"
 		end
@@ -131,7 +124,7 @@ SMODS.Joker{
 		end
 	end,
 	in_pool = function()
-		if SRL_MOD.srl_pool_req then
+		if SRL_CON.srl_pool_req then
 			local effect = SRL_FUNC.get_extra_val("effect_name")
 			return effect and effect == "Mending"
 		end
@@ -159,13 +152,15 @@ SMODS.Joker{
 		SRL_FUNC.mod_val(card, "chips"), SRL_FUNC.mod_val(card, "mult")}}
 	end,
 	calculate = function(self, card, context)
-		if context.joker_main and G.GAME.current_round.hands_played > 0 then
-			return {
-				chips = SRL_FUNC.mod_val(card, "chips"),
-				extra = {
-					mult = SRL_FUNC.mod_val(card, "mult"),
+		if context.joker_main then
+			if G.GAME.current_round.hands_played > 0 then
+				return {
+					chips = SRL_FUNC.mod_val(card, "chips"),
+					extra = {
+						mult = SRL_FUNC.mod_val(card, "mult"),
+					}
 				}
-			}
+			end
 		end
 	end,
 	in_pool = function()
@@ -187,33 +182,16 @@ SMODS.Joker{
 	pos = {x = 5, y = 0},
 	cost = 4,
 	blueprint_compat = true,
-	config = {extra = {srl_class = "Nature", srl_race = "Ent", chips_score = 10, prev_score = 0, score = 0}},
+	config = {extra = {srl_class = "Nature", srl_race = "Ent", discard = 1}},
 	loc_vars = function(self, info_queue, card)
 		return {vars = {self.name, SRL_FUNC.get_class(card), card.ability.extra.srl_race, colours = {SRL_FUNC.get_class_color(SRL_FUNC.get_class(card))},
-		SRL_FUNC.mod_val(card, "chips_score"), card.ability.extra.score}}
+		SRL_FUNC.mod_val(card, "discard")}}
 	end,
 	calculate = function(self, card, context)
-		if context.srl_pre_after and SRL_FUNC.no_bp_retrigger(context) then
-			card.ability.extra.score = SRL_FUNC.num_mod(SRL_FUNC.mod_val(card, "chips_score"), card.ability.extra.score_mod)
-		end
 		if context.cardarea == G.jokers and context.after and SRL_FUNC.no_bp_retrigger(context) then
-			card.ability.extra.prev_score = card.ability.extra.score
-		end
-		if context.final_scoring_step and card.ability.extra.prev_score ~= 0 then
-			return {
-				func = function()
-					local extra_chips = card.ability.extra.prev_score
-					G.E_MANAGER:add_event(Event({
-						func = function()
-							G.GAME.chips = G.GAME.chips + extra_chips
-						return true
-					end}))
-					card_eval_status_text(card, 'extra', nil, nil, nil, {
-						message = localize{type='variable',key='a_chips',vars={card.ability.extra.prev_score}},
-						colour = G.C.PURPLE
-					})
-				end
-			}
+			if G.GAME.current_round.hands_played > 0 then
+				ease_discard(SRL_FUNC.mod_val(card, "discard"))
+			end
 		end
 	end,
 	in_pool = function()
@@ -244,7 +222,7 @@ SMODS.Joker{
         return target.ability and target.ability.srl_class_orb
     end,
 	in_pool = function()
-		if SRL_MOD.srl_pool_req then
+		if SRL_CON.srl_pool_req then
 			if G.jokers and G.jokers.cards then
 				for _, v in ipairs(G.jokers.cards) do
 					if SRL_FUNC.get_spell_gem(v) then
@@ -366,17 +344,32 @@ SMODS.Joker{
 	rarity = 1,
 	pos = {x = 10, y = 0},
 	cost = 4,
-	config = {extra = {srl_class = "Life", srl_race = "Paragon", dollars = 2}},
+	config = {extra = {srl_class = "Life", srl_race = "Paragon", effect = 1}},
 	loc_vars = function(self, info_queue, card)
 		return {vars = {self.name, SRL_FUNC.get_class(card), card.ability.extra.srl_race, colours = {SRL_FUNC.get_class_color(SRL_FUNC.get_class(card))},
-		SRL_FUNC.mod_val(card, "dollars"), SRL_FUNC.mod_val(card, "dollars", SRL_FUNC.count_creature())}}
+		SRL_FUNC.mod_val(card, "effect")}}
 	end,
-	calc_dollar_bonus = function(self, card)
-        if G.GAME.current_round.hands_played == 1 then
-			return SRL_FUNC.mod_val(card, "dollars", SRL_FUNC.count_creature())
+	add_to_deck = function(self, card, from_debuff)
+        if G.jokers and G.jokers.cards then
+			for k, v in ipairs(G.jokers.cards) do
+				if v.ability.srl_buff_rounds then
+					v.ability.srl_buff_rounds = SRL_FUNC.mod_val(card, "effect")
+				end
+				if v.ability.srl_debuff_rounds then
+					v.ability.srl_debuff_rounds = SRL_FUNC.mod_val(card, "effect")
+				end
+				if v.ability.srl_minion_rounds then
+					v.ability.srl_minion_rounds = SRL_FUNC.mod_val(card, "effect")
+				end
+			end
 		end
     end,
 	in_pool = function()
+		if SRL_CON.srl_pool_req then
+			local effect = SRL_FUNC.get_extra_val("effect_name")
+			local minion = SRL_FUNC.get_extra_val("minion_name")
+			return (effect ~= nil or minion ~= nil)
+		end
 		return true
 	end,
 	atlas = "srl_jokers"
@@ -456,7 +449,7 @@ SMODS.Joker{
 		end
 	end,
 	in_pool = function()
-		if SRL_MOD.srl_pool_req then
+		if SRL_CON.srl_pool_req then
 			if G.jokers and G.jokers.cards then
 				for _, v in ipairs(G.jokers.cards or {}) do
 					if SRL_FUNC.can_receive_buff(v) then return true end
