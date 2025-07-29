@@ -15,6 +15,7 @@ SRL_MOD.buffable_stats = {
 SRL_MOD.modded_consumables = {}
 
 SMODS.load_file("utils.lua")()
+SMODS.load_file("data/assets.lua")()
 SMODS.load_file("data/effects.lua")()
 SMODS.load_file("data/minions.lua")()
 SMODS.load_file("data/jokers.lua")()
@@ -48,21 +49,15 @@ SMODS.Back{
     apply = function(self)
         G.E_MANAGER:add_event(Event({
             func = function()
-                add_joker("j_srl_ashwood_ent")
-                add_joker("j_srl_sapphire_paragon")
-                add_joker("j_srl_emerald_paragon")
+                add_joker("j_srl_ebony_ent")
+                --add_joker("j_srl_ashwood_ent")
+                --add_joker("j_srl_sapphire_paragon")
+                --add_joker("j_srl_emerald_paragon")
                 add_joker("j_srl_harpy_eyegouger")
                 return true
             end
         }))
     end,
-}
-
-SMODS.Atlas{
-    key = "modicon",
-    path = "srl_modicon.png",
-    px = 34,
-    py = 34,
 }
 
 SRL_MOD.optional_features = {
