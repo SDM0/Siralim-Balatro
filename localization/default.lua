@@ -25,6 +25,10 @@ local localization = {
 			k_effect = "Effect",
 			k_minion = "Minion",
 		},
+		v_dictionary = {
+			a_srl_discard = "+#1# Discard",
+			a_srl_discards = "+#1# Discards",
+		},
 		labels = {
 			srl_class_orb = "Class Orb",
 			srl_fusion = "Fusion",
@@ -143,6 +147,38 @@ local localization = {
 			},
 		},
 		Effect = {
+			eff_srl_agile = {
+				name = "Agile",
+				text = {"Does nothing"}
+			},
+			eff_srl_arcana = {
+				name = "Arcana",
+				text = {"Does nothing"}
+			},
+			eff_srl_barrier = {
+				name = "Barrier",
+				text = {"Does nothing"}
+			},
+			eff_srl_berserk = {
+				name = "Berserk",
+				text = {"Does nothing"}
+			},
+			eff_srl_defensive = {
+				name = "Defensive",
+				text = {"Does nothing"}
+			},
+			eff_srl_immune = {
+				name = "Immune",
+				text = {"Does nothing"}
+			},
+			eff_srl_invisible = {
+				name = "Invisible",
+				text = {"Does nothing"}
+			},
+			eff_srl_leeching = {
+				name = "Leeching",
+				text = {"Does nothing"}
+			},
 			eff_srl_mending = {
 				name = "Mending",
 				text = {
@@ -151,13 +187,121 @@ local localization = {
 					"{C:inactive}(lasts {C:attention}#2#{C:inactive} round(s))"
 				}
 			},
+			eff_srl_proficient = {
+				name = "Proficient",
+				text = {"Does nothing"}
+			},
+			eff_srl_protected = {
+				name = "Protected",
+				text = {"Does nothing"}
+			},
+			eff_srl_rebirth = {
+				name = "Rebirth",
+				text = {"Does nothing"}
+			},
+			eff_srl_repelling = {
+				name = "Repelling",
+				text = {"Does nothing"}
+			},
+			eff_srl_savage = {
+				name = "Savage",
+				text = {"Does nothing"}
+			},
+			eff_srl_shelled = {
+				name = "Shelled",
+				text = {"Does nothing"}
+			},
+			eff_srl_splashing = {
+				name = "Splashing",
+				text = {"Does nothing"}
+			},
+			eff_srl_taunting = {
+				name = "Taunting",
+				text = {"Does nothing"}
+			},
+			eff_srl_warded = {
+				name = "Warded",
+				text = {"Does nothing"}
+			},
+			eff_srl_bleeding = {
+				name = "Bleeding",
+				text = {"Does nothing"}
+			},
+			eff_srl_blighted = {
+				name = "Blighted",
+				text = {"Does nothing"}
+			},
 			eff_srl_blind = {
 				name = "Blind",
 				text = {
 					"{C:green}#1# in #2#{} chance",
-					"to not trigger",
+					"to not {C:attention}trigger{}",
 					"{C:inactive}(lasts {C:attention}#2#{C:inactive} round(s))"
 				}
+			},
+			eff_srl_bomb = {
+				name = "Bomb",
+				text = {"Does nothing"}
+			},
+			eff_srl_burning = {
+				name = "Burning",
+				text = {"Does nothing"}
+			},
+			eff_srl_confused = {
+				name = "Confused",
+				text = {"Does nothing"}
+			},
+			eff_srl_cursed = {
+				name = "Cursed",
+				text = {"Does nothing"}
+			},
+			eff_srl_disarmed = {
+				name = "Disarmed",
+				text = {"Does nothing"}
+			},
+			eff_srl_feared = {
+				name = "Feared",
+				text = {"Does nothing"}
+			},
+			eff_srl_frozen = {
+				name = "Frozen",
+				text = {"Does nothing"}
+			},
+			eff_srl_inverted = {
+				name = "Inverted",
+				text = {"Does nothing"}
+			},
+			eff_srl_poisoned = {
+				name = "Poisoned",
+				text = {"Does nothing"}
+			},
+			eff_srl_scorned = {
+				name = "Scorned",
+				text = {"Does nothing"}
+			},
+			eff_srl_silenced = {
+				name = "Silenced",
+				text = {"Does nothing"}
+			},
+			eff_srl_sleeping = {
+				name = "Sleeping",
+				text = {"Does nothing"}
+			},
+			eff_srl_snared = {
+				name = "Snared",
+				text = {"Does nothing"}
+			},
+			eff_srl_stone = {
+				name = "Stone",
+				text = {"Does nothing"}
+			},
+			eff_srl_vulnerable = {
+				name = "Vulnerable",
+				text = {"Does nothing"}
+			},
+			eff_srl_weak = {
+				name = "Weak",
+				text = {"Does nothing"}
 			},
 		},
 		Minion = {
@@ -167,6 +311,66 @@ local localization = {
 					"{C:chips}+#1#{} Chips",
 					"{C:inactive}(lasts {C:attention}#2#{C:inactive} round(s))"
 				}
+			},
+			min_srl_animated_weapon = {
+				name = "Animated Weapon",
+				text = {"Does nothing"}
+			},
+			min_srl_dire_wolves = {
+				name = "Dire Wolves",
+				text = {"Does nothing"}
+			},
+			min_srl_doppleganger = {
+				name = "Doppleganger",
+				text = {"Does nothing"}
+			},
+			min_srl_spiderlings = {
+				name = "Spiderlings",
+				text = {"Does nothing"}
+			},
+			min_srl_unstable_horror = {
+				name = "Unstable Horror",
+				text = {"Does nothing"}
+			},
+			min_srl_writhelings = {
+				name = "Writhelings",
+				text = {"Does nothing"}
+			},
+			min_srl_zombies = {
+				name = "Zombies",
+				text = {"Does nothing"}
+			},
+			min_srl_conquest = {
+				name = "Conquest",
+				text = {"Does nothing"}
+			},
+			min_srl_death = {
+				name = "Death",
+				text = {"Does nothing"}
+			},
+			min_srl_famine = {
+				name = "Famine",
+				text = {"Does nothing"}
+			},
+			min_srl_war = {
+				name = "War",
+				text = {"Does nothing"}
+			},
+			min_srl_microbots = {
+				name = "Microbots",
+				text = {"Does nothing"}
+			},
+			min_srl_amalgamation = {
+				name = "Amalgamation",
+				text = {"Does nothing"}
+			},
+			min_srl_illusion = {
+				name = "Illusion",
+				text = {"Does nothing"}
+			},
+			min_srl_torun_junior = {
+				name = "Torun Junior",
+				text = {"Does nothing"}
 			},
 		},
 		Other = {
@@ -263,9 +467,8 @@ local localization = {
 			j_srl_timeworn_ent = {
 				name = {"#1#", "{s:0.8,V:1}#2#{s:0.8} / #3#{}"},
 				text = {{
-					"{C:attention}#4#%{} of score obtained",
-                    "is added to the next hand",
-                    "{C:inactive}(Currently {C:tarot}#5#{C:inactive} score)"
+					"{C:red}+#4#{} discard after",
+                    "the {C:attention}first hand{}"
 				}}
 			},
 			j_srl_diamond_paragon = {
@@ -302,10 +505,8 @@ local localization = {
 			j_srl_topaz_paragon = {
 				name = {"#1#", "{s:0.8,V:1}#2#{s:0.8} / #3#{}"},
 				text = {{
-					"Earn {C:money}$#4#{} per Creature",
-					"if you win on first hand",
-					"at the end of round",
-					"{C:inactive}(Currently {C:money}$#5#{C:inactive})"
+					"{C:green}Buffs{} and {C:red}Status{}",
+					"lasts {C:attention}#4#{} round"
 				}}
 			},
 			j_srl_blood_reaper = {
