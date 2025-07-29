@@ -3,14 +3,16 @@ version = "1.0.0"
 dump_lua = true
 priority = 0
 
-# Context srl_pre_after
+# Reload fusion center on continue
 [[patches]]
 [patches.pattern]
-target = "functions/state_events.lua"
-pattern = "if hand_chips*mult > 0 then "
+target = "card.lua"
+pattern = "self.VT.h = self.T.H"
 position = "before"
 payload = """
-SMODS.calculate_context({srl_pre_after = true, chips_score = math.floor(hand_chips * mult)})
+if cardTable.ability.srl_fusion then
+    cardTable.ability.srl_fusion.config.center = G.P_CENTERS[cardTable.ability.srl_fusion.key]
+end
 """
 match_indent = true
 
@@ -22,7 +24,8 @@ pattern = "if AUT.info then"
 position = "before"
 payload = """
 if card and card.ability and card.ability.srl_fusion then
-    local fusion_ui = card.ability.srl_fusion:generate_UIBox_ability_table()
+    local _card = {ability = card.ability.srl_fusion.ability, config = card.ability.srl_fusion.config, bypass_lock = true}
+    local fusion_ui = Card.generate_UIBox_ability_table(_card)
     multi_boxes[#multi_boxes+1] = desc_from_rows(fusion_ui.main)
 end
 """
@@ -127,7 +130,7 @@ end
 [[patches]]
 [patches.pattern]
 target = "functions/common_events.lua"
-pattern = "if _c.set == 'Other' then"
+pattern = "for _, v in ipairs(info_queue) do"
 position = "before"
 payload = '''
 if card and card.ability then

@@ -1,10 +1,3 @@
-SMODS.Atlas{
-    key = "srl_class_orbs",
-    path = "srl_class_orbs.png",
-    px = 61,
-    py = 65
-}
-
 SMODS.ConsumableType {
     key = 'srl_Class_Orb',
     collection_rows = {3, 3},
@@ -97,7 +90,16 @@ SMODS.Consumable{
                 end
             end
 
-            selected_creature.ability.srl_fusion = SMODS.shallow_copy(creature_to_fuse)
+            selected_creature.ability.srl_fusion = {
+                fake_card = true,
+                key = creature_to_fuse.config.center.key,
+                ID = card.ID,
+                ability = copy_table(creature_to_fuse.ability),
+                config = {
+                    center = G.P_CENTERS[creature_to_fuse.config.center.key]
+                },
+            }
+
             used_tarot:juice_up(0.3, 0.5)
 
             return true
