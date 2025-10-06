@@ -21,13 +21,18 @@ function SRL_FUNC.get_extra_val(val)
     if not (G.jokers and G.jokers.cards) then return end
 
     for _, v in ipairs(G.jokers.cards) do
-        if v and v.ability and v.ability.extra and v.ability.extra[val] ~= nil then
-            return v.ability.extra[val]
+        if v and v.ability then
+            if v.ability.extra and v.ability.extra[val] ~= nil then
+                return v.ability.extra[val]
+            end
+            if v.ability.srl_fusion and v.ability.srl_fusion.ability and v.ability.srl_fusion.ability[val] ~= nil then
+                return v.ability.srl_fusion.ability[val]
+            end
         end
     end
 end
 
--- Init light rainbow gradient
+-- Init rainbow gradient
 SMODS.Gradient {
     key = "light_rainbow",
     colours = {HEX("ff7474"), HEX("4399e7"), HEX("6ad564")},
@@ -147,13 +152,6 @@ function SRL_FUNC.is_normal_creature(card)
     if not card then return false end
 
     return SRL_FUNC.is_creature(card) and not SRL_FUNC.is_fused(card)
-end
-
--- Check if the Joker card is a Creature fusion
-function SRL_FUNC.is_fused_creature(card)
-    if not card then return false end
-
-    return SRL_FUNC.is_creature(card) and SRL_FUNC.is_fused(card)
 end
 
 -- Check if there are x Creatures with a specific class
@@ -455,6 +453,15 @@ function SRL_FUNC.set_effect(card, effect, rounds, immediate)
 
     if _effect then
         local _rounds = rounds or 1
+
+        -- Topaz Paragon creature effect
+        local topaz_paragons = SMODS.find_card("j_srl_topaz_paragon")
+        if next(topaz_paragons) then
+            print("paragon found before applying " .. _effect.key)
+            _rounds = SRL_FUNC.mod_val(topaz_paragons[#topaz_paragons], "effect")
+        end
+
+
         G.E_MANAGER:add_event(Event({
             trigger = 'after',
             delay = not immediate and 0.2 or 0,
@@ -786,10 +793,11 @@ function Card:calculate_joker(context)
         return SMODS.merge_effects({calc}, {ret}), trig
     end
 
-    if not self.fake_card and context.end_of_round and context.main_eval and SRL_FUNC.no_bp_retrigger(context) then
-        self:calculate_eor_srl_buff()
-        self:calculate_eor_srl_debuff()
-        self:calculate_eor_srl_minion()
+
+    if self and not self.srl_fusion and context.end_of_round and context.main_eval and SRL_FUNC.no_bp_retrigger(context) then
+        Card.calculate_eor_srl_buff(self)
+        Card.calculate_eor_srl_debuff(self)
+        Card.calculate_eor_srl_minion(self)
     end
 
     if not (context.card and context.card == self) and calc ~= nil and SRL_FUNC.get_debuff_name(self) == "Blind" then
@@ -861,6 +869,127 @@ function Card:remove_from_deck(from_debuff)
     end
 
     return crmd(self, from_debuff)
+end
+
+-- Find card in fusion
+local sfc = SMODS.find_card
+function SMODS.find_card(key, count_debuffed)
+    local results = sfc(key, count_debuffed)
+    if not G.jokers or not G.jokers.cards then return {} end
+    for _, area in ipairs(SMODS.get_card_areas('jokers')) do
+        if area.cards then
+            for _, v in pairs(area.cards) do
+                if v and type(v) == 'table' and v.ability and v.ability.srl_fusion and v.ability.srl_fusion.key == key and (count_debuffed or not v.debuff) then
+                    table.insert(results, v.ability.srl_fusion)
+                end
+            end
+        end
+    end
+    return results
+end
+
+-- Fusion card text
+local cest = card_eval_status_text
+function card_eval_status_text(card, eval_type, amt, percent, dir, extra)
+    if card.srl_fusion then card = card.srl_fusion end
+    cest(card, eval_type, amt, percent, dir, extra)
+end
+
+--Save fusion data
+local cs = Card.save
+function Card:save()
+    local cardTable = cs(self)
+    if self.ability.srl_fusion and type(self.ability.srl_fusion) ~= 'string' then
+        cardTable.srl_fusion = Fusion.save(self.ability.srl_fusion)
+    end
+    return cardTable
+end
+
+--Load fusion data
+local cl = Card.load
+function Card:load(cardTable, other_card)
+    cl(self, cardTable, other_card)
+    if cardTable.srl_fusion then
+        local args = cardTable.srl_fusion
+        args.srl_fusion = self
+        args.config.center = G.P_CENTERS[args.config.center]
+        cardTable.ability.srl_fusion = Fusion(args)
+    end
+end
+
+-- Tooltips use multibox
+local gcu = generate_card_ui
+function generate_card_ui(_c, full_UI_table, specific_vars, card_type, badges, hide_desc, main_start, main_end, card)
+    local ui = gcu(_c, full_UI_table, specific_vars, card_type, badges, hide_desc, main_start, main_end, card)
+    if card and card.ability.srl_fusion then
+        local srl_fusion = {}
+        local vars = {}
+        if card.ability.srl_fusion.config.center.loc_vars then
+            vars = (card.ability.srl_fusion.config.center:loc_vars({}, card.ability.srl_fusion) or {})
+            vars = (vars and vars.vars) or {}
+        else
+            vars = Card.generate_UIBox_ability_table({ability = card.ability.srl_fusion.ability, config = card.ability.srl_fusion.config, bypass_lock = true}, true)
+        end
+        localize {type = 'descriptions', set = 'Joker', key = card.ability.srl_fusion.key, nodes = srl_fusion, vars = vars or {}, AUT = { info = { "I HATE GENERATE_CARD_UI" } }}
+        ui.srl_fusion = srl_fusion
+    end
+    return ui
+end
+
+local chp = G.UIDEF.card_h_popup
+function G.UIDEF.card_h_popup(card)
+    local ret_val = chp(card)
+    local AUT = card.ability_UIBox_table
+    if AUT.srl_fusion then
+        table.insert(ret_val.nodes[1].nodes[1].nodes[1].nodes,
+            #ret_val.nodes[1].nodes[1].nodes[1].nodes + (card.config.center.discovered and 0 or 1),
+            desc_from_rows(AUT.srl_fusion))
+    end
+    return ret_val
+end
+
+-- Proper fusion calc effect handling (1)
+function SRL_FUNC.replace_fusion_effect(effect)
+    if type(effect) == 'table' then
+        local new_eff = {}
+        for k, v in pairs(effect) do
+            if type(v) == 'table' then
+                if v.srl_fusion then
+                    new_eff[k] = v.srl_fusion
+                elseif k == 'extra' then
+                    new_eff[k] = SRL_FUNC.replace_fusion_effect(v)
+                else
+                    new_eff[k] = v
+                end
+            else
+                new_eff[k] = v
+            end
+        end
+        return new_eff
+    end
+    return effect
+end
+
+-- Proper fusion calc effect handling (2)
+local sce = SMODS.calculate_effect
+function SMODS.calculate_effect(effect, card, ...)
+    effect = SRL_FUNC.replace_fusion_effect(effect)
+    if card and card.srl_fusion then card = card.srl_fusion end
+    return sce(effect, card, ...)
+end
+
+-- Prevent stack overflow on fusion copy
+local cc = copy_card
+function copy_card(other, new_card, card_scale, playing_card, strip_edition)
+    if other.ability and other.ability.srl_fusion then
+        local fusion_data = other.ability.srl_fusion
+        other.ability.srl_fusion = nil
+        local _new_card = cc(other, new_card, card_scale, playing_card, strip_edition)
+        other.ability.srl_fusion = fusion_data
+        _new_card.ability.srl_fusion = fusion_data
+        return _new_card
+    end
+    return cc(other, new_card, card_scale, playing_card, strip_edition)
 end
 
 --- Talisman compat
