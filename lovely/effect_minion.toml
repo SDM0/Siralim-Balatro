@@ -1,0 +1,77 @@
+[manifest]
+version = "1.0.0"
+dump_lua = true
+priority = 0
+
+# Effect and minion calculation (1)
+[[patches]]
+[patches.pattern]
+target = 'functions/common_events.lua'
+pattern = '-- TARGET: evaluate your own repetition effects'
+position = 'before'
+match_indent = true
+payload = '''
+if card.ability.srl_effect_buff then
+    local effect_buff = card:calculate_srl_buff(context)
+    if effect_buff then
+        ret.effect_buff = effect
+    end
+end
+
+if card.ability.srl_effect_debuff then
+    local effect_debuff = card:calculate_srl_debuff(context)
+    if effect_debuff then
+        ret.effect_debuff = effect
+    end
+end
+
+if card.ability.srl_minion then
+    local minion = card:calculate_srl_minion(context)
+    if minion then
+        ret.minion = minion
+    end
+end
+'''
+
+# Effect and minion calculation (2)
+[[patches]]
+[patches.pattern]
+target = 'functions/common_events.lua'
+pattern = '-- TARGET: evaluate your own general effects'
+position = 'before'
+match_indent = true
+payload = '''
+if card.ability.srl_effect_buff then
+    local effect_buff = card:calculate_srl_buff(context)
+    if effect_buff then
+        ret.effect_buff = effect
+    end
+end
+
+if card.ability.srl_effect_debuff then
+    local effect_debuff = card:calculate_srl_debuff(context)
+    if effect_debuff then
+        ret.effect_debuff = effect
+    end
+end
+
+if card.ability.srl_minion then
+    local minion = card:calculate_srl_minion(context)
+    if minion then
+        ret.minion = minion
+    end
+end
+'''
+
+# Effect and minion calculation (3)
+[[patches]]
+[patches.pattern]
+target = '=[SMODS _ "src/utils.lua"]'
+pattern = 'for _, k in ipairs(SMODS.Sticker.obj_buffer) do'
+position = 'before'
+match_indent = true
+payload = '''
+for _, key in ipairs({'effect_buff', 'effect_debuff', 'minion'}) do
+    SMODS.calculate_effect_table_key(effect_table, key, card, ret)
+end
+'''

@@ -3,129 +3,6 @@ version = "1.0.0"
 dump_lua = true
 priority = 0
 
-# Reload fusion center on continue
-[[patches]]
-[patches.pattern]
-target = "card.lua"
-pattern = "self.VT.h = self.T.H"
-position = "before"
-payload = """
-if cardTable.ability.srl_fusion then
-    cardTable.ability.srl_fusion.config.center = G.P_CENTERS[cardTable.ability.srl_fusion.key]
-end
-"""
-match_indent = true
-
-# Add fusion ability to multibox
-[[patches]]
-[patches.pattern]
-target = "functions/UI_definitions.lua"
-pattern = "if AUT.info then"
-position = "before"
-payload = """
-if card and card.ability and card.ability.srl_fusion then
-    local _card = {ability = card.ability.srl_fusion.ability, config = card.ability.srl_fusion.config, bypass_lock = true}
-    local fusion_ui = Card.generate_UIBox_ability_table(_card)
-    multi_boxes[#multi_boxes+1] = desc_from_rows(fusion_ui.main)
-end
-"""
-match_indent = true
-
-# Buff update
-[[patches]]
-[patches.pattern]
-target = 'card.lua'
-pattern = 'if G.STAGE == G.STAGES.RUN then'
-position = 'after'
-match_indent = true
-payload = '''
-    SRL_FUNC.apply_all_buffs()
-'''
-
-# Prevent "remove_from_deck" effect from fusion
-[[patches]]
-[patches.pattern]
-target = 'card.lua'
-pattern = 'self.added_to_deck = false'
-position = 'after'
-match_indent = true
-payload = '''
-if self.srl_ignore_remove_effects then return end
-'''
-
-# Effect and minion calculation 1
-[[patches]]
-[patches.pattern]
-target = 'functions/common_events.lua'
-pattern = '-- TARGET: evaluate your own repetition effects'
-position = 'before'
-match_indent = true
-payload = '''
-if card.ability.srl_effect_buff then
-    local effect_buff = card:calculate_srl_buff(context)
-    if effect_buff then
-        ret.effect_buff = effect
-    end
-end
-
-if card.ability.srl_effect_debuff then
-    local effect_debuff = card:calculate_srl_debuff(context)
-    if effect_debuff then
-        ret.effect_debuff = effect
-    end
-end
-
-if card.ability.srl_minion then
-    local minion = card:calculate_srl_minion(context)
-    if minion then
-        ret.minion = minion
-    end
-end
-'''
-
-# Effect and minion calculation 2
-[[patches]]
-[patches.pattern]
-target = 'functions/common_events.lua'
-pattern = '-- TARGET: evaluate your own general effects'
-position = 'before'
-match_indent = true
-payload = '''
-if card.ability.srl_effect_buff then
-    local effect_buff = card:calculate_srl_buff(context)
-    if effect_buff then
-        ret.effect_buff = effect
-    end
-end
-
-if card.ability.srl_effect_debuff then
-    local effect_debuff = card:calculate_srl_debuff(context)
-    if effect_debuff then
-        ret.effect_debuff = effect
-    end
-end
-
-if card.ability.srl_minion then
-    local minion = card:calculate_srl_minion(context)
-    if minion then
-        ret.minion = minion
-    end
-end
-'''
-
-# Effect and minion calculation 3
-[[patches]]
-[patches.pattern]
-target = '=[SMODS _ "src/utils.lua"]'
-pattern = 'for _, k in ipairs(SMODS.Sticker.obj_buffer) do'
-position = 'before'
-match_indent = true
-payload = '''
-for _, key in ipairs({'effect_buff', 'effect_debuff', 'minion'}) do
-    SMODS.calculate_effect_table_key(effect_table, key, card, ret)
-end
-'''
-
 # Class Orb, fusion, effect and minion tooltip and badges on card
 [[patches]]
 [patches.pattern]
@@ -134,6 +11,16 @@ pattern = "for _, v in ipairs(info_queue) do"
 position = "before"
 payload = '''
 if card and card.ability then
+    if card.ability.srl_fusion then
+        local _vars = {}
+        if card.ability.srl_fusion.config.center.loc_vars then
+            _vars = (card.ability.srl_fusion.config.center:loc_vars(info_queue, card.ability.srl_fusion))
+            _vars = (_vars and _vars.vars) or {}
+        end
+        if is_info_queue then
+            info_queue[#info_queue+1] = {srl_fusion = true, set = 'Joker', key = card.ability.srl_fusion.key, vars = _vars or {}}
+        end
+    end
     if card.ability.srl_class_orb and card.ability.srl_class_orb == "Ultimate" then
         info_queue[#info_queue+1] = {key = "srl_ultimate_class", set = "Other"}
     end
