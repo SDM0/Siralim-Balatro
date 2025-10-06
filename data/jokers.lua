@@ -6,7 +6,7 @@ SMODS.Joker{
 	rarity = 1,
 	pos = {x = 0, y = 0},
 	cost = 4,
-	config = {extra = {srl_class = "Nature", srl_race = "Ent", effect = 1, effect_name = "Mending"}},
+	config = {extra = {srl_class = "Nature", srl_race = "Ent", effect = 3, effect_name = "Mending"}},
 	loc_vars = function(self, info_queue, card)
 		info_queue[#info_queue+1] = SRL_FUNC.eff_iq("Mending", card)
 		return {vars = {self.name, SRL_FUNC.get_class(card), card.ability.extra.srl_race, colours = {SRL_FUNC.get_class_color(SRL_FUNC.get_class(card))},
@@ -367,8 +367,7 @@ SMODS.Joker{
 	in_pool = function()
 		if SRL_CON.srl_pool_req then
 			local effect = SRL_FUNC.get_extra_val("effect_name")
-			local minion = SRL_FUNC.get_extra_val("minion_name")
-			return (effect ~= nil or minion ~= nil)
+			return effect ~= nil
 		end
 		return true
 	end,
@@ -543,9 +542,9 @@ SMODS.Joker{
 			local editionless_jokers = SMODS.Edition:get_edition_cards(G.jokers, true)
 			local eligible_card = nil
 			if next(editionless_jokers) then
-				local eligible_card = pseudorandom_element(editionless_jokers, 'srl_shadow_reaper')
+				eligible_card = pseudorandom_element(editionless_jokers, 'srl_shadow_reaper')
 			elseif G.jokers.cards and G.jokers.cards[1] then
-				local eligible_card = pseudorandom_element(G.jokers.cards, 'srl_shadow_reaper')
+				eligible_card = pseudorandom_element(G.jokers.cards, 'srl_shadow_reaper')
 			end
 			if eligible_card then eligible_card:set_edition('e_negative', true) end
 		end
