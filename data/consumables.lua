@@ -40,7 +40,7 @@ for i = 1, #classes do
             end}))
             G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.2,func = function() if G.jokers then G.jokers:unhighlight_all() end; return true end }))
         end,
-        display_size = {w = 76, h = 81},
+        display_size = {w = 79, h = 81},
         atlas = "srl_class_orbs"
     }
 
@@ -48,6 +48,39 @@ for i = 1, #classes do
 end
 
 -- Fusion
+
+Fusion = Card:extend()
+
+function Fusion:init(args)
+    self.base_cost = args.base_cost or 0
+    self.extra_cost = args.extra_cost or 0
+    self.cost = args.cost or 0
+    self.sell_cost = args.sell_cost or 0
+    self.sell_cost_label = args.sell_cost_label or 0
+    self.area = args.srl_fusion.area
+    self.base = {}
+
+    self.key = args.key
+    self.fake_card = true
+    self.srl_fusion = args.srl_fusion
+    self.ability = args.ability
+    self.config = args.config
+end
+
+function Fusion:save()
+    local cardTable = {
+        base_cost = self.base_cost,
+        extra_cost = self.extra_cost,
+        cost = self.cost,
+        sell_cost = self.sell_cost,
+        ability = self.ability,
+        fake_card = true,
+        config = {
+            center = self.config.center.key
+        },
+    }
+    return cardTable
+end
 
 SMODS.Consumable{
     key = 'fusion',
@@ -90,15 +123,15 @@ SMODS.Consumable{
                 end
             end
 
-            selected_creature.ability.srl_fusion = {
+            selected_creature.ability.srl_fusion = Fusion({
                 fake_card = true,
-                key = creature_to_fuse.config.center.key,
-                ID = card.ID,
+                srl_fusion = selected_creature,
+                key = creature_to_fuse.config.center_key,
                 ability = copy_table(creature_to_fuse.ability),
                 config = {
-                    center = G.P_CENTERS[creature_to_fuse.config.center.key]
+                    center = G.P_CENTERS[creature_to_fuse.config.center_key]
                 },
-            }
+            })
 
             used_tarot:juice_up(0.3, 0.5)
 
