@@ -234,9 +234,9 @@ local localization = {
 			eff_srl_blind = {
 				name = "Blind",
 				text = {
-					"{C:green}#1# in #2#{} chance",
+					"{C:green}#1# in #2#{} chance to not",
 					"to not {C:attention}trigger{}",
-					"{C:inactive}(lasts {C:attention}#2#{C:inactive} round(s))"
+					"{C:inactive}(lasts {C:attention}#3#{C:inactive} round(s))"
 				}
 			},
 			eff_srl_bomb = {
@@ -406,7 +406,7 @@ local localization = {
 				name = "Blind",
 				text = {
 					"{C:green}#1# in #2#{} chance",
-					"to not {C:attention}trigger{} each effect"
+					"to not {C:attention}trigger{}"
 				}
 			},
 			min_srl_animated_gem_no_rounds = {
