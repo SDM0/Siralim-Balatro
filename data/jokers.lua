@@ -112,6 +112,7 @@ SMODS.Joker{
 	cost = 4,
 	config = {extra = {srl_class = "Nature", srl_race = "Ent", blind = 5}},
 	loc_vars = function(self, info_queue, card)
+		info_queue[#info_queue+1] = SRL_FUNC.eff_iq("Mending", card)
 		return {vars = {self.name, SRL_FUNC.get_class(card), card.ability.extra.srl_race, colours = {SRL_FUNC.get_class_color(SRL_FUNC.get_class(card))},
 		SRL_FUNC.mod_val(card, "blind"), SRL_FUNC.mod_val(card, "blind", SRL_FUNC.count_buff("Mending"))}}
 	end,
@@ -430,6 +431,9 @@ SMODS.Joker{
 		return {vars = {self.name, SRL_FUNC.get_class(card), card.ability.extra.srl_race, colours = {SRL_FUNC.get_class_color(SRL_FUNC.get_class(card))},
 		SRL_FUNC.mod_val(card, "buff_all")}}
 	end,
+	srl_buff_target_filter = function(target)
+        return false
+    end,
 	calculate = function(self, card, context)
 		if context.selling_self and SRL_FUNC.no_bp_retrigger(context) then
 			local buffable_jokers = {}
@@ -649,7 +653,8 @@ SMODS.Joker{
 	end,
 	calculate = function(self, card, context)
 		if context.setting_blind then
-			SRL_FUNC.set_effect(G.jokers.cards[1], "blind", SRL_FUNC.mod_val(card, "effect"))
+			SRL_FUNC.set_effect(G.jokers.cards[1], "Blind", SRL_FUNC.mod_val(card, "effect"))
+			return nil, true
 		end
 	end,
 	in_pool = function()
