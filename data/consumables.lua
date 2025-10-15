@@ -152,3 +152,18 @@ SMODS.Consumable{
 }
 
 SRL_MOD.modded_consumables["c_srl_fusion"] = "Fusion"
+
+-- TODO: Improve timing of application
+SMODS.DrawStep{
+    key = 'golden_foil',
+    order = 21,
+    func = function(self)
+        if self.ability and self.ability.srl_fusion then
+            self.children.center:draw_shader('srl_golden', nil, self.ARGS.send_to_shader)
+            if self.children.front then
+                self.children.front:draw_shader('srl_golden', nil, self.ARGS.send_to_shader)
+            end
+        end
+    end,
+    conditions = {vortex = false, facing = 'front'}
+}

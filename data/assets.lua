@@ -44,3 +44,8 @@ SMODS.Atlas{
     px = 61,
     py = 65
 }
+
+SMODS.Shader{
+    key = "golden",
+    path = "golden.fs"
+}
