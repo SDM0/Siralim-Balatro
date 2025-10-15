@@ -17,8 +17,15 @@ if card and card.ability then
             _vars = (card.ability.srl_fusion.config.center:loc_vars(info_queue, card.ability.srl_fusion))
             _vars = (_vars and _vars.vars) or {}
         end
-        if is_info_queue then
+        if desc_nodes ~= full_UI_table.main then
             info_queue[#info_queue+1] = {srl_fusion = true, set = 'Joker', key = card.ability.srl_fusion.key, vars = _vars or {}}
+        end
+        local last_iq = info_queue[#info_queue]
+        for _, v in ipairs(info_queue) do
+            if v == last_iq then
+                info_queue[#info_queue] = nil
+                break
+            end
         end
     end
     if card.ability.srl_class_orb and card.ability.srl_class_orb == "Ultimate" then
