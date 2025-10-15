@@ -269,88 +269,79 @@ function SRL_FUNC.buff_get(card, buff)
     return total
 end
 
--- Get the Creature and it's fusion if it has one
-function SRL_FUNC.get_fusions()
-    local collected = {}
-    local function collect(card)
-        if not card or collected[card] then return end
-        collected[card] = true
-        if card.ability and card.ability.srl_fusion then
-            collect(card.ability.srl_fusion)
-        end
+-- Get the creature and fusion if it has one
+function SRL_FUNC.collect_fusion(card, collected)
+    if not card or collected[card] then return end
+    collected[card] = true
+    if card.ability and card.ability.srl_fusion then
+        SRL_FUNC.collect_fusion(card.ability.srl_fusion, collected)
     end
+end
 
-    for _, card in ipairs(G.jokers.cards or {}) do
-        collect(card)
+-- Helper to apply buff to both card and its fusion
+local function apply_buff(card, stat, value)
+    SRL_FUNC.buff_change(card, stat, value, '+')
+    local fusion = card.ability and card.ability.srl_fusion
+    if fusion then
+        SRL_FUNC.buff_change(fusion, stat, value, '+')
     end
-
-    local result = {}
-    for card in pairs(collected) do
-        result[#result + 1] = card
-    end
-
-    return result
 end
 
 -- Update buffed values
 function SRL_FUNC.apply_all_buffs()
     if not (G.jokers and G.jokers.cards) then return end
 
-    local all_creatures = SRL_FUNC.get_fusions()
+    local stats = SRL_MOD.buffable_stats or {}
+
+    -- Collect all creatures and their fusions
     local targets = {}
-
-    -- Include all cards that qualify as creatures
-    for _, card in ipairs(all_creatures) do
+    for _, card in ipairs(G.jokers.cards or {}) do
         if SRL_FUNC.is_creature(card) then
-            targets[#targets+1] = card
+            targets[#targets + 1] = card
+            if card.ability and card.ability.srl_fusion then
+                targets[#targets + 1] = card.ability.srl_fusion
+            end
         end
     end
 
-    -- Reset all existing buffs
+    -- Process each target in one unified loop
     for _, card in ipairs(targets) do
+        -- Reset buffs
         if card.ability and card.ability.srl_buff then
-            for buff_key in pairs(card.ability.srl_buff) do
-                SRL_FUNC.buff_change(card, buff_key, nil, 'reset')
+            for key in pairs(card.ability.srl_buff) do
+                SRL_FUNC.buff_change(card, key, nil, 'reset')
             end
         end
-    end
 
-    -- Apply self-buffs to creatures
-    for _, target in ipairs(targets) do
-        for _, stat in ipairs(SRL_MOD.buffable_stats or {}) do
-            local field = 'srl_passive_buff_' .. stat
-            if target.ability and target.ability[field] then
-                SRL_FUNC.buff_change(target, stat, target.ability[field], '+')
+        -- Self-buffs
+        if card.ability then
+            if card.ability.srl_passive_buff_all then
+                for _, stat in ipairs(stats) do
+                    apply_buff(card, stat, card.ability.srl_passive_buff_all)
+                end
+            end
+            for _, stat in ipairs(stats) do
+                local field = 'srl_passive_buff_' .. stat
+                if card.ability[field] then
+                    apply_buff(card, stat, card.ability[field])
+                end
             end
         end
-    end
 
-    -- Apply buffs from sources to targets and their fusions
-    for _, source in ipairs(all_creatures) do
-        local extra = source.ability and source.ability.extra or {}
-        local center = source.config and source.config.center or nil
-        local buff_target_filter = center and center.srl_buff_target_filter
+        -- Apply buffs this creature gives to others
+        local extra = card.ability and card.ability.extra or {}
+        local center = card.config and card.config.center
+        local filter = center and center.srl_buff_target_filter
 
-        if extra and type(extra) == "table" then
+        if type(extra) == "table" then
             for key, value in pairs(extra) do
                 if key:match("^buff_") then
                     local buff_type = key:gsub("^buff_", "")
-                    local stats = (buff_type == "all") and SRL_MOD.buffable_stats or {buff_type}
-
+                    local buff_stats = (buff_type == "all") and stats or {buff_type}
                     for _, target in ipairs(targets) do
-                        local passes_filter = not buff_target_filter or buff_target_filter(target)
-                        if passes_filter then
-                            -- Apply to the main target
-                            for _, stat in ipairs(stats) do
-                                SRL_FUNC.buff_change(target, stat, value, '+')
-                            end
-
-                            -- Also apply to its fusion (unconditionally)
-                            local fusion = target.ability and target.ability.srl_fusion
-                            if fusion then
-                                for _, stat in ipairs(stats) do
-                                    SRL_FUNC.buff_change(fusion, stat, value, '+')
-                                end
+                        if not filter or filter(target) then
+                            for _, stat in ipairs(buff_stats) do
+                                apply_buff(target, stat, value)
                             end
                         end
                     end
@@ -369,6 +360,8 @@ function SRL_FUNC.can_receive_buff(card)
     for _, stat in ipairs(buffable_stats) do
         if card.ability.extra[stat] ~= nil then
             return true
+        elseif card.ability.srl_fusion then
+            return SRL_FUNC.can_receive_buff(card.ability.srl_fusion)
         end
     end
 
